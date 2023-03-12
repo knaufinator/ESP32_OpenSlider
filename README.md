@@ -1,6 +1,8 @@
 ## Openslider XYZ
 ![GithubGIFPt3](https://user-images.githubusercontent.com/45019189/82838573-02ad6f80-9ea3-11ea-948f-28d909c240e9.gif) ![GithubGIFPt4](https://user-images.githubusercontent.com/45019189/82838984-51a7d480-9ea4-11ea-8838-1f60a102015d.gif)
 
+My own flavor of the Openslider project, I want to use an ESP32 and write the code + design the PCB in my spare time to bette myself,.. follow along if ya like!
+
 
 OpenSlider XYZ is a motorized slider with multiple axis of rotation, built using common hardware and 3D printed components.
 
@@ -16,13 +18,3 @@ https://www.youtube.com/watch?v=6d8_oJsUrao
 #### Example videos:
 
 [V0.3](https://www.instagram.com/p/CFU9hZHjh4D/) - [V0.3](https://www.instagram.com/p/CBXKDw_DIsY/) - [V0.3](https://www.instagram.com/p/CBQC0gHDRkP/) - [V0.2](https://www.instagram.com/p/Bsbb4AUHvLy/) - [V0.1](https://www.instagram.com/p/BqFpmRJnVI0/) - [V0.1](https://www.instagram.com/p/BqFVQTXnpN9/) - [V0.1](https://www.instagram.com/p/BqJI3UbnU7M/) - [V0.1](https://www.instagram.com/p/Bp2GQGXHDDo/)
-
-#### Interested in supporting the development of OpenSlider?
-
-Join the discord! https://discord.gg/khKH3Cx
-
-Any feedback is greatly appreciated.
-
-
-
-[Patreon](https://www.patreon.com/adamslaboratory)
