@@ -1,10 +1,11 @@
 #include <TMCStepper.h>
 #include <HardwareSerial.h>
 #include <AccelStepper.h>
-
+#include <MultiStepper.h>
+#include "Arduino.h"
 using namespace TMC2209_n;
  
-#define max_speed 2000 // steps per second
+#define max_speed 4000 // steps per second
 #define acceleration 100 // steps per second^2
 #define num_steps 35000
 #define num_stepsRz 1000
@@ -35,8 +36,10 @@ using namespace TMC2209_n;
 #define R_SENSE_3          0.11f      
 #define STALL_VALUE_3     50          
 
+MultiStepper StepperControl; 
+
 TMC2209Stepper driver(&SERIAL_PORT, R_SENSE, DRIVER_ADDRESS);
-AccelStepper stepper(1, STEP_PIN, DIR_PIN); // 1 = driver type, 2 = step pin, 3 = direction pin
+AccelStepper stepper1(1, STEP_PIN, DIR_PIN); // 1 = driver type, 2 = step pin, 3 = direction pin
 
 TMC2209Stepper driver2(&SERIAL_PORT_2, R_SENSE_2, DRIVER_ADDRESS_2);
 AccelStepper stepper2(1, STEP_PIN_2, DIR_PIN_2); // 1 = driver type, 2 = step pin, 3 = direction pin
@@ -86,6 +89,34 @@ void home()
   delay(200);  
 }
 
+void Home()
+{
+  driver.shaft(false);
+  driver.VACTUAL(homeSpeed);
+
+  delay(100);  
+  
+  while(!digitalRead(DIAG_PIN) ) {  
+    delay(20);  
+  }
+ 
+     driver.VACTUAL(0);
+   
+    clearError();
+    homed = true;
+    delay(20);  
+
+    stepper1.setCurrentPosition(0);
+    stepper1.moveTo(20);
+    while(stepper1.distanceToGo() != 0)
+    {
+      stepper1.setSpeed(300);
+      stepper1.runSpeed();
+    }
+    stepper1.setCurrentPosition(0);
+}
+
+
 
 void setup() {
 
@@ -111,8 +142,8 @@ void setup() {
   pinMode(DIR_PIN_3, OUTPUT);
    
   //setup x stepper
-  stepper.setMaxSpeed(max_speed);
-  stepper.setAcceleration(acceleration);
+  stepper1.setMaxSpeed(max_speed);
+  stepper1.setAcceleration(acceleration);
   driver.begin();
   driver.toff(4);
   driver.blank_time(24);
@@ -151,12 +182,16 @@ void setup() {
   driver3.semax(2);
   driver3.sedn(0b01);
   driver3.SGTHRS(STALL_VALUE);
+   
+  StepperControl.addStepper(stepper1);
+  StepperControl.addStepper(stepper2);
+  StepperControl.addStepper(stepper3);
 
   //clear any errors that may be in the stepper drivers
   clearError();
 
   //beging homing sequence
-  home();
+  Home();
 }
 
 bool moving = false;
@@ -168,75 +203,41 @@ int rZdir = 1;
 bool rYActive = false;
 int rYdir = 1;
 
+
+long gotoposition[3]; 
+
+volatile long XInPoint=0;
+volatile long YInPoint=0;
+volatile long XOutPoint=0;
+volatile long YOutPoint=0;  
+volatile long totaldistance=0;
+int flag=0; 
+int temp=0;
+int i,j;
+unsigned long switch0=0;
+unsigned long rotary0=0;
+float setspeed=200;
+float motorspeed;
+float timeinsec;
+float timeinmins;
+volatile boolean TurnDetected;  
+volatile boolean rotationdirection;  
+
+
 void loop() {
   
-  //stop homing sequence when read pin, convert this to interupt
-  if (!homed && digitalRead(DIAG_PIN) ) {  
-    driver.VACTUAL(0);
-    driver2.VACTUAL(0);
-    driver3.VACTUAL(0);
-    clearError();
-    homed = true;
-    delay(20);  
-  }
-
-  //start test sequences for all 3 motors
-  if(homed && !pathFinished && !moving)
-  {
-    stepper.moveTo(num_steps);
-    moving = true;
-  }
+    gotoposition[0]=num_steps;
+    gotoposition[1]=5000;
+    gotoposition[2]=2000;
  
-  if(homed && !rZActive)
-  {
-    stepper2.moveTo(rZdir * num_stepsRz);
-    rZActive = true;
-  }
-
-  if(homed && !rYActive)
-  {
-    stepper3.moveTo(rYdir * num_stepsRy);
-    rYActive = true;
-  }
-
-  //when test sequence is up on x, just stop it
-  if(moving && stepper.distanceToGo() == 0 && !pathFinished)
-  {
-    moving = false;
-    pathFinished = true;
-  }
- 
-  //for ry, rz, have them reverse direction, next itteration, and repeat
-  if(rYActive && stepper3.distanceToGo() == 0)
-  {
-    //turn around 
-    rYdir = -rYdir;
-    rYActive = false;
-  }
-
-  if(rZActive && stepper2.distanceToGo() == 0)
-  {
-    //turn around 
-    rZdir = -rZdir;
-    rZActive = false;
-  }
- 
+    int seconds = 60;
 
 
-  //run each motor if needed, only start when home sequence has completed
-  if(homed && moving && !pathFinished)
-  {
-      stepper.run();  
-  }   
+    float speed = num_steps / seconds;
 
-  if(homed && rZActive )
-  {
-      stepper2.run();  
-  }   
-
-  if(homed && rZActive )
-  {
-      stepper3.run();
-  }  
+    stepper1.setMaxSpeed(speed);
+    StepperControl.moveTo(gotoposition);
+    StepperControl.runSpeedToPosition();
+  
 }
 
