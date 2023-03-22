@@ -3,7 +3,25 @@
 #include <AccelStepper.h>
 #include <MultiStepper.h>
 #include "Arduino.h"
+#include <BLEDevice.h>
+#include <BLEServer.h>
+#include <BLEUtils.h>
+#include <BLE2902.h>
+
 using namespace TMC2209_n;
+using namespace std;
+
+
+BLEServer* pServer = NULL;
+ 
+BLECharacteristic* pPauseCharacteristic = NULL;
+bool deviceConnected = false;
+bool oldDeviceConnected = false;
+
+#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
+ 
+#define PAUSECHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+
  
 #define max_speed 4000 // steps per second
 #define acceleration 100 // steps per second^2
@@ -51,6 +69,16 @@ AccelStepper stepper3(1, STEP_PIN_3, DIR_PIN_3); // 1 = driver type, 2 = step pi
 hw_timer_t * timer1 = NULL;
 int32_t homeSpeed = 2000;
 bool homed = false;
+
+class MyServerCallbacks: public BLEServerCallbacks {
+    void onConnect(BLEServer* pServer) {
+      deviceConnected = true;
+    };
+
+    void onDisconnect(BLEServer* pServer) {
+      deviceConnected = false;
+    }
+};
 
 void clearError() {
   digitalWrite(EN_PIN, HIGH);
@@ -117,6 +145,75 @@ void Home()
 }
 
 
+class ServerCallbacks: public BLEServerCallbacks {
+    void onConnect(BLEServer* pServer) {
+      deviceConnected = true;
+    };
+
+    void onDisconnect(BLEServer* pServer) {
+      deviceConnected = false;
+    }
+};
+ 
+//to pause platform, send "1", to start send "0" string
+class BlePauseCallback: public BLECharacteristicCallbacks {
+
+    void onWrite(BLECharacteristic *pCharacteristic) {
+   
+      string result = pCharacteristic->getValue().c_str();
+      
+      Serial.println("BlePauseCallback");
+      Serial.println(pCharacteristic->getValue().c_str());
+    
+      int i = atoi(pCharacteristic->getValue().c_str());
+    
+      if(i == 0)
+      {  
+        //pauseEStop();
+      }
+      else if(i == 1)
+      {
+       // resumeEStop();
+      }
+    }    
+};
+
+
+void setupBle(){
+  
+  Serial.println("Starting BLE init!");
+
+  BLEDevice::init("Open 6DOF Services");
+  BLEServer *pServer = BLEDevice::createServer();
+  pServer->setCallbacks(new ServerCallbacks());
+  BLEService *pService = pServer->createService(SERVICE_UUID);
+  
+  pPauseCharacteristic = pService->createCharacteristic(
+                                         PAUSECHARACTERISTIC_UUID,
+                                         BLECharacteristic::PROPERTY_READ |
+                                         BLECharacteristic::PROPERTY_WRITE |
+                                         BLECharacteristic::PROPERTY_NOTIFY |
+                                         BLECharacteristic::PROPERTY_INDICATE
+                                       );
+
+ 
+
+           
+  pPauseCharacteristic->addDescriptor(new BLE2902());
+
+   
+  pPauseCharacteristic->setCallbacks(new BlePauseCallback());
+ 
+  pService->start();
+
+  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
+  pAdvertising->addServiceUUID(SERVICE_UUID);
+  pAdvertising->setScanResponse(true);
+  pAdvertising->setMinPreferred(0x12);
+  BLEDevice::startAdvertising(); 
+}
+
+
 
 void setup() {
 
@@ -125,6 +222,8 @@ void setup() {
   SERIAL_PORT.begin(115200);
   SERIAL_PORT_2.begin(115200);
  
+  setupBle();
+
   //x axis outputs
   pinMode(EN_PIN, OUTPUT);
   pinMode(STEP_PIN, OUTPUT);
@@ -226,18 +325,23 @@ volatile boolean rotationdirection;
 
 void loop() {
   
-    gotoposition[0]=num_steps;
-    gotoposition[1]=5000;
-    gotoposition[2]=2000;
- 
-    int seconds = 60;
+/*     gotoposition[0]=num_steps;
+    gotoposition[1]=2000;
+    gotoposition[2]=0;
+  
+    int seconds = 60 * 60 * 2;
 
 
     float speed = num_steps / seconds;
 
     stepper1.setMaxSpeed(speed);
     StepperControl.moveTo(gotoposition);
-    StepperControl.runSpeedToPosition();
-  
+    StepperControl.runSpeedToPosition(); */
+   
+ 
+
+
+
+
 }
 
